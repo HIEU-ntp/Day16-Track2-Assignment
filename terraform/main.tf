@@ -204,9 +204,22 @@ resource "aws_iam_instance_profile" "ai_profile" {
   role = aws_iam_role.ai_role.name
 }
 
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*-x86_64"]
+  }
+  filter {
+    name   = "state"
+    values = ["available"]
+  }
+}
+
 resource "aws_instance" "gpu_node" {
-  ami                    = data.aws_ami.deep_learning.id
-  instance_type          = "g4dn.xlarge" 
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = "r5.2xlarge"
   subnet_id              = aws_subnet.private[0].id
   vpc_security_group_ids = [aws_security_group.gpu_sg.id]
   key_name               = aws_key_pair.lab_key.key_name
@@ -220,7 +233,7 @@ resource "aws_instance" "gpu_node" {
   user_data = templatefile("${path.module}/user_data.sh", {
     hf_token = var.hf_token
     model_id = var.model_id
-  })
+  }) # Không cần HF token/model_id khi chạy LightGBM, có thể để dummy
 
   tags = { Name = "AI-Inference-Node" }
 }
